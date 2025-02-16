@@ -1,10 +1,12 @@
-// filepath: /Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/server/routes/productRoutes.js
 const express = require('express');
 const router = express.Router();
-const { getAll, create } = require('../controllers/productController');
-const { authenticate, authorize } = require('../middleware/authMiddleware');
+const ProductController = require('../controllers/ProductController');
+const authenticate = require('../middleware/authMiddleware');
 
-router.get('/', getAll);
-router.post('/', authenticate, authorize('seller'), create);
+router.get('/', ProductController.getAllProducts);
+router.get('/:id', ProductController.getProductById);
+router.post('/add', authenticate, ProductController.createProduct);
+router.put('/update/:id', authenticate, ProductController.updateProduct); // Changed to /update/:id
+router.delete('/delete/:id', authenticate, ProductController.deleteProduct); // Changed to /delete/:id
 
 module.exports = router;
