@@ -10,10 +10,20 @@ const authenticate = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, secretKey);
+        console.log("Decoded user from token:", decoded.user);
         req.user = decoded.user;
+        console.log("req.user after middleware:", req.user);
         next();
     } catch (err) {
-        res.status(401).json({ message: 'Token is not valid' });
+        console.error("JWT Verification Error:", err);
+
+        if (err.name === 'TokenExpiredError') {
+            return res.status(401).json({ message: 'Token expired' });
+        } else if (err.name === 'JsonWebTokenError') {
+            return res.status(401).json({ message: 'Invalid token' });
+        } else {
+            return res.status(401).json({ message: 'Token is not valid' });
+        }
     }
 };
 
