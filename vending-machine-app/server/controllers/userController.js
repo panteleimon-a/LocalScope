@@ -1,41 +1,34 @@
 const { poolPromise } = require('../config/db');
+require('dotenv').config(); // Load environment variables from .env (at the top of your file)
+const secretKey = process.env.SECRET_KEY;
 const mssql = require('mssql');
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken');
+// New in-memory blacklist for tokens
 const User = require('../models/User'); // Import the User model
 
+const tokenBlacklist = new Set(); // New in-memory token blacklist
+
 const UserController = {
-    registerUser: async (req, res) => {
-        const { username, password, role = 'buyer' } = req.body;
-
-        try {
-            const pool = await poolPromise;
-
-            const hashedPassword = await bcrypt.hash(password, 10);
-            const request = new mssql.Request(pool);
-
-            request.input('username', mssql.VarChar, username);
-            request.input('password', mssql.VarChar, hashedPassword);
-            request.input('role', mssql.VarChar, role);
-
-            const result = await request.query(
-                'INSERT INTO Users (Username, Password, Role) VALUES (@username, @password, @role); SELECT SCOPE_IDENTITY() AS id;'
-            );
-
-            const userId = result.recordset[0].id; // Consistent lowercase 'id'
-            res.status(201).json({ message: 'User registered successfully', userId });
-
-        } catch (err) {
-            console.error("Error in registerUser:", err);
-            if (err.code === 'SQLITE_CONSTRAINT') { // Adapt this if not using SQL Server
-                res.status(400).json({ message: 'Username already exists' });
+    loginUser: async (req, res) => {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            const token = authHeader.split(' ')[1];
+            // If the token is blacklisted, ignore it and proceed with login.
+            if (tokenBlacklist.has(token)) {
+                // ...proceed without treating user as already logged in...
             } else {
-                res.status(500).json({ message: 'Server error during registration' });
+                try {
+                    jwt.verify(token, secretKey);
+                    return res.status(400).json({ message: 'User already logged in' });
+                } catch (error) {
+                    // If the error is TokenExpiredError, allow login; otherwise, proceed.
+                    if (error.name !== 'TokenExpiredError') {
+                        // ...continue login...
+                    }
+                }
             }
         }
-    },
-
-    loginUser: async (req, res) => {
         const { username, password } = req.body;
 
         try {
@@ -63,9 +56,8 @@ const UserController = {
                     role: user.Role
                 }
             };
-            console.log("User ID in payload:", payload.user.id, typeof payload.user.id);
+            console.log("User successful login:", payload.user.id, typeof payload.user.id);
 
-            const secretKey = "je2v!he6";
             jwt.sign(payload, secretKey, { expiresIn: '1h' }, (err, token) => {
                 if (err) throw err;
                 res.json({ token });
@@ -77,10 +69,52 @@ const UserController = {
         }
     },
 
-    getUserById: async (req, res) => {
-        console.log("req.user (start of getProfile):", req.user); // Log req.user
-        console.log("req.user.id (start of getProfile):", req.user.id, typeof req.user.id);
-    
+    logoutUser: (req, res) => {
+        const authHeader = req.headers.authorization;
+        if (authHeader) {
+            const token = authHeader.split(' ')[1];
+            tokenBlacklist.add(token);
+        }
+        const decodedToken = jwt.decode(authHeader.split(' ')[1]);
+        const userId = decodedToken ? decodedToken.user.id : null;
+        res.json({ message: "Logout successful" });
+        console.log("User successful logout:", userId);
+
+    },
+
+    registerUser: async (req, res) => {
+        const { username, password, role = 'buyer' } = req.body;
+
+        try {
+            const pool = await poolPromise;
+            const hashedPassword = await bcrypt.hash(password, 10);
+            const request = new mssql.Request(pool);
+
+            request.input('username', mssql.VarChar, username);
+            request.input('password', mssql.VarChar, hashedPassword);
+            request.input('role', mssql.VarChar, role);
+
+            const result = await request.query(
+                'INSERT INTO Users (Username, Password, Role) VALUES (@username, @password, @role); SELECT SCOPE_IDENTITY() AS id;'
+            );
+
+            const userId = result.recordset[0].id;
+            res.status(201).json({ message: 'User registered successfully', userId });
+
+        } catch (err) {
+            console.error("Error in registerUser:", err);
+
+            if (err.message.includes('Violation of UNIQUE KEY constraint')) { // SQL Server specific
+                res.status(400).json({ message: 'Username already exists' });
+            } else if (err.code === 'SQLITE_CONSTRAINT') { // SQLite specific (if you were using SQLite)
+                res.status(400).json({ message: 'Username already exists' });
+            } else {
+                res.status(500).json({ message: 'Server error during registration' });
+            }
+        }
+    },
+
+    getUserById: async (req, res) => {    
         const userId = req.user.id; // Access from req.user
 
         if (isNaN(userId)) {
@@ -315,7 +349,8 @@ const UserController = {
             console.error("Error in purchase:", error);
             res.status(500).json({ message: error.message || "Purchase failed" });
         }
-    },       // Other useful methods can go here
+    },       
+    // Other useful methods can go here
 };
 
 module.exports = UserController;

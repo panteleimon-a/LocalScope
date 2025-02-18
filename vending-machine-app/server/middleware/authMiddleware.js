@@ -1,5 +1,6 @@
 const jwt = require('jsonwebtoken');
-const secretKey = "je2v!he6";
+require('dotenv').config(); // Load environment variables from .env (at the top of your file)
+const secretKey = process.env.SECRET_KEY;
 
 const authenticate = (req, res, next) => {
     const token = req.header('Authorization')?.split(' ')[1];
@@ -10,9 +11,8 @@ const authenticate = (req, res, next) => {
 
     try {
         const decoded = jwt.verify(token, secretKey);
-        console.log("Decoded user from token:", decoded.user);
+        console.log("User authenticated:", decoded.user);
         req.user = decoded.user;
-        console.log("req.user after middleware:", req.user);
         next();
     } catch (err) {
         console.error("JWT Verification Error:", err);
