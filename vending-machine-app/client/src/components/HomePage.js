@@ -7,7 +7,6 @@ const HomePage = () => {
   const [token, setToken] = useState(null);
 
   useEffect(() => {
-    // Initialize token state from localStorage
     setToken(localStorage.getItem('token'));
     fetch('http://localhost:3000/products')
       .then(res => res.json())

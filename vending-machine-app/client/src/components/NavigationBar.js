@@ -1,162 +1,161 @@
 import React, { useState, useEffect } from 'react';
 
-const NavigationBar = () => {
-  const [isLoggedIn, setIsLoggedIn] = useState(false);
+const NavigationBar = ({ onNavigate }) => {
   const [token, setToken] = useState(null);
-  const [username, setUsername] = useState('');
-  const [password, setPassword] = useState('');
-
-  // Registration state
+  const [loginUsername, setLoginUsername] = useState('');
+  const [loginPassword, setLoginPassword] = useState('');
+  const [loginError, setLoginError] = useState('');
   const [regUsername, setRegUsername] = useState('');
   const [regPassword, setRegPassword] = useState('');
   const [regRole, setRegRole] = useState('buyer');
-  const [regDeposit, setRegDeposit] = useState('');
   const [regError, setRegError] = useState('');
 
   useEffect(() => {
     const storedToken = localStorage.getItem('token');
     if (storedToken) {
       setToken(storedToken);
-      setIsLoggedIn(true);
     }
   }, []);
 
-  const handleLogin = (e) => {
+  const handleLogin = async (e) => {
     e.preventDefault();
-    fetch('http://localhost:3000/user/login', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username, password })
-    })
-      .then(res => {
-        if (!res.ok) throw new Error('Login failed');
-        return res.json();
-      })
-      .then(data => {
-        // Assume data.token is returned on successful login
+    if (token) {
+      setLoginError('User already signed-in');
+      return;
+    }
+    try {
+      const response = await fetch('http://localhost:3000/user/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginUsername, password: loginPassword })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        if (errorData.message === 'User already logged in') {
+          setLoginError('There is already an active session using your account.');
+        } else {
+          throw new Error(errorData.message || 'Login failed');
+        }
+      } else {
+        const data = await response.json();
+        localStorage.setItem('token', data.token);
         setToken(data.token);
-        setIsLoggedIn(true);
-        localStorage.setItem('token', data.token); // Store token for use in HomePage.js
-      })
-      .catch(err => console.error(err));
+        setLoginUsername('');
+        setLoginPassword('');
+        setLoginError('');
+        onNavigate('home');
+      }
+    } catch (err) {
+      setLoginError(err.message);
+    }
+  };
+
+  const handleTerminateSessions = async () => {
+    try {
+      const response = await fetch('http://localhost:3000/user/logout', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: loginUsername, password: loginPassword })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Failed to terminate sessions');
+      }
+      setLoginError('All active sessions have been terminated. Please log in again.');
+    } catch (err) {
+      setLoginError(err.message);
+    }
+  };
+
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    try {
+      const response = await fetch('http://localhost:3000/user', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username: regUsername, password: regPassword, role: regRole })
+      });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.message || 'Registration failed');
+      }
+      setRegUsername('');
+      setRegPassword('');
+      setRegRole('buyer');
+      setRegError('');
+      onNavigate('home');
+    } catch (err) {
+      setRegError(err.message);
+    }
   };
 
   const handleLogout = () => {
-    const token = localStorage.getItem('token'); // Fixed from postItem to getItem
-    fetch('http://localhost:3000/user/logout', {
-      method: 'POST', // Using POST request
-      headers: { 'Authorization': `Bearer ${token}` }
-    })
-      .then(res => res.json())
-      .then(data => {
-         console.log(data.message);
-         setToken(null);
-         setIsLoggedIn(false);
-         localStorage.removeItem('token');
-      })
-      .catch(err => {
-         console.error(err);
-         setToken(null);
-         setIsLoggedIn(false);
-         localStorage.removeItem('token');
-      });
-  };
-
-  const handleRegister = (e) => {
-    e.preventDefault();
-    setRegError(''); // reset previous error
-    const body = {
-      username: regUsername,
-      password: regPassword,
-      role: regRole
-    };
-    // Include deposit only if provided
-    if (regDeposit !== '') {
-      body.deposit = Number(regDeposit);
-    }
-
-    fetch('http://localhost:3000/user', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(body)
-    })
-      .then(res => {
-        if (!res.ok) {
-          return res.json().then(errorData => {
-            throw new Error(errorData.message);
-          });
-        }
-        return res.json();
-      })
-      .then(data => {
-        console.log('Registration successful', data);
-        // Optionally, you might want to auto-login or notify the user.
-      })
-      .catch(err => setRegError(err.message));
+    localStorage.removeItem('token');
+    setToken(null);
+    onNavigate('home');
   };
 
   return (
-    <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexDirection: 'column' }}>
-      <div style={{ width: '100%' }}>
-        {/* ...existing navigation elements... */}
-      </div>
-      <div style={{ width: '100%', textAlign: 'right' }}>
-        {token ? (
-          <div>
-            <span>Logged in</span>
-            <button onClick={handleLogout}>Logout</button>
-          </div>
-        ) : (
-          <div>
-            <form onSubmit={handleLogin}>
-              <input
-                type="text"
-                placeholder="Username"
-                value={username}
-                onChange={e => setUsername(e.target.value)}
-                required
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={e => setPassword(e.target.value)}
-                required
-              />
-              <button type="submit">Login</button>
-            </form>
-            <form onSubmit={handleRegister}>
-              <input
-                type="text"
-                placeholder="Username"
-                value={regUsername}
-                onChange={e => setRegUsername(e.target.value)}
-                required
-              />
-              <input
-                type="password"
-                placeholder="Password"
-                value={regPassword}
-                onChange={e => setRegPassword(e.target.value)}
-                required
-              />
-              <select value={regRole} onChange={e => setRegRole(e.target.value)}>
-                <option value="buyer">Buyer</option>
-                <option value="seller">Seller</option>
-              </select>
-              <input
-                type="number"
-                placeholder="Deposit (optional)"
-                value={regDeposit}
-                onChange={e => setRegDeposit(e.target.value)}
-              />
-              <button type="submit">Register</button>
-              {regError && <p style={{ color: 'red' }}>{regError}</p>}
-            </form>
-          </div>
-        )}
-      </div>
-    </div>
+    <nav>
+      <button onClick={() => onNavigate('home')}>Home</button>
+      {token ? (
+        <>
+          <button onClick={() => onNavigate('profile')}>Profile</button>
+          <button onClick={() => onNavigate('myproducts')}>My Products</button>
+          <button onClick={handleLogout}>Logout</button>
+        </>
+      ) : (
+        <>
+          <form onSubmit={handleLogin}>
+            <input
+              type="text"
+              placeholder="Username"
+              value={loginUsername}
+              onChange={(e) => setLoginUsername(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={loginPassword}
+              onChange={(e) => setLoginPassword(e.target.value)}
+              required
+            />
+            <button type="submit">Login</button>
+            {loginError && (
+              <div>
+                <p style={{ color: 'red' }}>{loginError}</p>
+                {loginError === 'There is already an active session using your account.' && (
+                  <button onClick={handleTerminateSessions}>Terminate All Sessions</button>
+                )}
+              </div>
+            )}
+          </form>
+          <form onSubmit={handleRegister}>
+            <input
+              type="text"
+              placeholder="Username"
+              value={regUsername}
+              onChange={(e) => setRegUsername(e.target.value)}
+              required
+            />
+            <input
+              type="password"
+              placeholder="Password"
+              value={regPassword}
+              onChange={(e) => setRegPassword(e.target.value)}
+              required
+            />
+            <select value={regRole} onChange={(e) => setRegRole(e.target.value)}>
+              <option value="buyer">Buyer</option>
+              <option value="seller">Seller</option>
+            </select>
+            <button type="submit">Register</button>
+            {regError && <p style={{ color: 'red' }}>{regError}</p>}
+          </form>
+        </>
+      )}
+    </nav>
   );
 };
 

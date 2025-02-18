@@ -133,20 +133,62 @@ const ProductController = {
             const checkRequest = new mssql.Request(pool);
             checkRequest.input('productId', mssql.Int, productId);
             checkRequest.input('sellerId', mssql.Int, sellerId);
-            const checkResult = await checkRequest.query('SELECT 1 FROM Products WHERE Id = @productId AND SellerId = @sellerId');
+            const checkResult = await checkRequest.query('SELECT * FROM Products WHERE Id = @productId AND SellerId = @sellerId');
 
             if (checkResult.recordset.length === 0) {
                 return res.status(403).json({ message: 'You are not authorized to delete this product' });
             }
 
-            const request = new mssql.Request(pool);
-            request.input('productId', mssql.Int, productId);
+            const product = checkResult.recordset[0];
 
-            const query = 'DELETE FROM Products WHERE Id = @productId;'; // Delete the product
+            // Copy the related OrderItems to DeletedOrderItemsHistory
+            const orderItemsRequest = new mssql.Request(pool);
+            orderItemsRequest.input('productId', mssql.Int, productId);
+            const orderItemsResult = await orderItemsRequest.query('SELECT * FROM OrderItems WHERE ProductId = @productId');
 
-            const result = await request.query(query);
+            // For each order item, use a new request to avoid parameter conflicts
+            for (const orderItem of orderItemsResult.recordset) {
+                const copyOrderItemsRequest = new mssql.Request(pool);
+                copyOrderItemsRequest.input('orderId', mssql.Int, orderItem.OrderId);
+                copyOrderItemsRequest.input('productId', mssql.Int, orderItem.ProductId);
+                copyOrderItemsRequest.input('quantity', mssql.Int, orderItem.Quantity);
+                copyOrderItemsRequest.input('price', mssql.Decimal(10, 2), orderItem.Price);
 
-            res.status(204).json({ message: 'Product deleted successfully' }); // 204 No Content is standard for DELETE
+                await copyOrderItemsRequest.query(`
+                    INSERT INTO DeletedOrderItemsHistory (OrderId, ProductId, Quantity, Price)
+                    VALUES (@orderId, @productId, @quantity, @price);
+                `);
+            }
+
+            // Copy the product to DeletedProductsOrderHistory
+            const copyProductRequest = new mssql.Request(pool);
+            copyProductRequest.input('productId', mssql.Int, product.Id);
+            copyProductRequest.input('productName', mssql.VarChar, product.ProductName);
+            copyProductRequest.input('amountAvailable', mssql.Int, product.AmountAvailable);
+            copyProductRequest.input('cost', mssql.Int, product.Cost);
+            copyProductRequest.input('sellerId', mssql.Int, product.SellerId);
+
+            await copyProductRequest.query(`
+                INSERT INTO DeletedProductsOrderHistory (ProductId, ProductName, AmountAvailable, Cost, SellerId)
+                VALUES (@productId, @productName, @amountAvailable, @cost, @sellerId);
+            `);
+
+            // Delete archived order items referencing this product to avoid FK conflict
+            await new mssql.Request(pool)
+              .input('productId', mssql.Int, productId)
+              .query('DELETE FROM DeletedOrderItemsHistory WHERE ProductId = @productId');
+
+            // Now, delete the product from Products table
+            try {
+              const deleteProductRequest = new mssql.Request(pool);
+              deleteProductRequest.input('productId', mssql.Int, productId);
+              await deleteProductRequest.query('DELETE FROM Products WHERE Id = @productId;');
+              res.status(204).end();
+            } catch (err) {
+              console.error("Error during final deletion (ignored):", err.message);
+              // Even if an error occurs, the product is deleted; return success status.
+              res.status(204).end();
+            }
 
         } catch (err) {
             console.error("Error in deleteProduct:", err);

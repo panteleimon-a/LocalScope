@@ -13,38 +13,63 @@ This application simulates a vending machine with user authentication, product m
 
 ## Technologies Used
 
-*   **Frontend:** HTML, JavaScript
-*   **Backend:**  (Assumed Node.js with Express - the provided code snippet implies a backend API)
+*   **Frontend:** HTML, JavaScript (REACT)
+*   **Backend:** Node.js with Express
 
 ## Setup
 
 1.  **Backend:**
-    *   Set up your backend server (e.g., Node.js with Express).  You'll need endpoints for the API calls used by the frontend (login, register, get users, get products, add product, update product, delete product, deposit, buy, reset, logout, logout all).  The provided JavaScript code assumes a base URL of `http://localhost:3000`.
+    *   Run `node server/app.js` to start the backend server.
 2.  **Frontend:**
-    *   Open `client/index.html` in your web browser.
+    *   Run `node client/src/app.js` to launch the frontend application.
 
 ## API Endpoints (Example - Adapt to your actual backend)
 
-*   `POST /login`: Login user.
-*   `POST /user`: Register user.
-*   `GET /user`: Get all users (requires authentication).
-*   `GET /product`: Get all products.
-*   `POST /product`: Add product (requires authentication).
-*   `PUT /product/:id`: Update product (requires authentication).
-*   `DELETE /product/:id`: Delete product (requires authentication).
-*   `POST /deposit`: Deposit coins (requires authentication).
-*   `POST /buy`: Buy product (requires authentication).
-*   `POST /reset`: Reset deposit (requires authentication).
-*   `POST /logout`: Logout user (requires authentication).
-*   `POST /logout/all`: Logout all users (requires authentication).
+* `POST /user/login`: Login user.
+* `POST /user`: Register user.
+* `GET /user/:id`: Get user details (requires authentication).
+* `GET /user/profile`: Get user profile (requires authentication).
+* `PUT /user/profile/deposit`: Deposit coins (requires authentication).
+* `PUT /user/profile/reset`: Reset deposit (requires authentication).
+* `POST /user/purchase`: Purchase product (requires authentication).
+* `POST /user/logout`: Logout user (requires authentication).
+* `GET /products`: Get all products.
+* `GET /products/:id`: Get product details.
+* `POST /products/add`: Add product (requires authentication).
+* `PUT /products/update/:id`: Update product (requires authentication).
+* `DELETE /products/delete/:id`: Delete product (requires authentication).
 
 ## Usage
 
 1.  Start the backend server.
-2.  Open `client/index.html` in your browser.
+2.  Open https://localhost:3001/ in your browser.
 3.  Register or log in.
-4.  If logged in as a seller, you can manage products.
+4.  If logged in as a seller, you can manage products, and buy products. // A soda seller could become thirsty sometime! :D
 5.  If logged in as a buyer, you can deposit coins and buy products.
+
+## Testing Guidelines
+
+This project uses the following test libraries:
+- Mocha – Test runner
+- Chai – Assertion library
+- Supertest – HTTP integration testing
+
+### Setup
+
+Install the dependencies for testing using:
+
+```bash
+npm install --save-dev mocha chai supertest
+```
+
+### Running the Tests
+
+Run:
+
+```bash
+npm test
+```
+Logs are stored in /server/test-log.txt.
 
 ## Notes
 
