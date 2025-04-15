@@ -1,0 +1,22 @@
+Server listening on port 3000
+
+
+  API Endpoints
+    PUT /profile/deposit
+User authenticated: { id: 3, role: 'seller' }
+Connected to SQL Server
+      ✔ should add a valid deposit (114ms)
+User authenticated: { id: 3, role: 'seller' }
+      ✔ should return error for invalid deposit coin
+    POST /purchase
+User authenticated: { id: 3, role: 'seller' }
+      ✔ should create an order with valid purchase data
+User authenticated: { id: 3, role: 'seller' }
+      ✔ should return error for invalid purchase data
+    DELETE /delete/:id
+User authenticated: { id: 3, role: 'seller' }
+      ✔ should delete a product for authorized seller
+
+
+  5 passing (163ms)
+
