@@ -31,7 +31,7 @@ This application simulates a vending machine with user authentication, product m
 
 ### Frontend:
 
-1. Run your frontend application as usual (see your frontend documentation).
+1. Run the frontend client documentation.
 
 ## API Endpoints
 
