@@ -1,0 +1,15 @@
+version: '3.8'
+services:
+  frontend:
+    build: ./vending-machine-app/client
+    ports:
+      - "3001:80"
+    depends_on:
+      - backend
+
+  backend:
+    build: ./vending-machine-app/java-server
+    ports:
+      - "8080:8080"
+    environment:
+      - SPRING_PROFILES_ACTIVE=prod
