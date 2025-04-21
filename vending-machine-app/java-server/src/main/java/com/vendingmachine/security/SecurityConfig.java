@@ -24,7 +24,6 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/products/**").permitAll()
                 .anyRequest().authenticated()
             )
-            // Only add the JWT filter for authenticated endpoints
             .addFilterBefore(jwtAuthenticationFilter, org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter.class);
 
         return http.build();

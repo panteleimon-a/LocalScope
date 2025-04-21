@@ -9,5 +9,12 @@ public class Order {
     private Date orderDate;
     private int totalPrice;
     private List<OrderItem> items;
-    // getters and setters
+
+    public void setId(Long id) {
+        this.id = id;
+    }
+
+    public Long getId() {
+        return id;
+    }
 }

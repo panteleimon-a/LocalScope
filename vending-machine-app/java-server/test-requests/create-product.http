@@ -1,0 +1,9 @@
+POST http://localhost:8080/products
+Content-Type: application/json
+Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJ1c2VyIjp7InJvbGUiOiJidXllciIsImlkIjozNCwidXNlcm5hbWUiOiJwYW5nZWxpZGlzMiJ9LCJleHAiOjE3NDUxNzU1NDl9.HmxmQp_culVFp4PMoW7H-ntVf9EeKBRbfu58YTcE_Pg
+
+{
+  "productName": "RTX-5070",
+  "amountAvailable": 10,
+  "cost": 150
+}

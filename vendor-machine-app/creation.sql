@@ -21,8 +21,31 @@ CREATE TABLE Products (
     Id INT IDENTITY(1,1) PRIMARY KEY,
     ProductName VARCHAR(255) NOT NULL,
     AmountAvailable INT NOT NULL,
-    Cost INT NOT NULL
+    Cost INT NOT NULL,
+    SellerId INT NOT NULL,
+    FOREIGN KEY (SellerId) REFERENCES Users(Id)
 );
+GO
+
+-- Trigger: Merge product on insert (by ProductName and SellerId)
+CREATE TRIGGER trg_MergeProductOnInsert
+ON Products
+INSTEAD OF INSERT
+AS
+BEGIN
+    SET NOCOUNT ON;
+    -- For each inserted row
+    MERGE Products AS target
+    USING (SELECT ProductName, AmountAvailable, Cost, SellerId FROM inserted) AS src
+    ON target.ProductName = src.ProductName AND target.SellerId = src.SellerId
+    WHEN MATCHED THEN
+        UPDATE SET 
+            AmountAvailable = target.AmountAvailable + src.AmountAvailable,
+            Cost = CASE WHEN target.Cost <> src.Cost THEN src.Cost ELSE target.Cost END
+    WHEN NOT MATCHED THEN
+        INSERT (ProductName, AmountAvailable, Cost, SellerId)
+        VALUES (src.ProductName, src.AmountAvailable, src.Cost, src.SellerId);
+END
 GO
 
 -- Create the Orders table

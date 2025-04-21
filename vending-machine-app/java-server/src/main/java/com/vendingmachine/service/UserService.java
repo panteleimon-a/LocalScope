@@ -6,8 +6,7 @@ import com.vendingmachine.repository.*;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.bcrypt.BCrypt;
 import org.springframework.stereotype.Service;
-import io.jsonwebtoken.Jwts;
-import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -25,6 +24,9 @@ public class UserService {
 
     @Value("${jwt.secret}")
     private String jwtSecret;
+
+    // In-memory token blacklist (for demonstration, not production)
+    private final Set<String> tokenBlacklist = new HashSet<>();
 
     public String login(LoginRequest request) {
         User user = userRepository.findByUsername(request.getUsername());
@@ -44,6 +46,7 @@ public class UserService {
                 .compact();
     }
 
+    // Should return User
     public User register(RegisterRequest request) {
         if (userRepository.findByUsername(request.getUsername()) != null) {
             throw new RuntimeException("Username already exists");
@@ -56,35 +59,119 @@ public class UserService {
         return userRepository.save(user);
     }
 
-    public User getUserById(Long id) {
-        User user = userRepository.findById(id);
+    public User getUserById(String id) {
+        Long userId;
+        try {
+            userId = Long.parseLong(id);
+        } catch (NumberFormatException e) {
+            throw new RuntimeException("Invalid user ID");
+        }
+        User user = userRepository.findById(userId);
         if (user == null) throw new RuntimeException("User not found");
         return user;
     }
 
-    public User getProfile(Long userId) {
-        return getUserById(userId);
+    // Helper to extract userId from JWT token in the Authorization header
+    // Expects authHeader to be "Bearer <jwt>"
+    private Long extractUserIdFromAuthHeader(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Unauthorized");
+        }
+        String token = authHeader.substring(7);
+        if (tokenBlacklist.contains(token)) {
+            throw new RuntimeException("Token is blacklisted");
+        }
+        try {
+            Claims claims = Jwts.parser()
+                    .setSigningKey(jwtSecret.getBytes())
+                    .parseClaimsJws(token)
+                    .getBody();
+            Map<String, Object> userMap = (Map<String, Object>) claims.get("user");
+            Object idObj = userMap.get("id");
+            if (idObj instanceof Integer) {
+                return ((Integer) idObj).longValue();
+            } else if (idObj instanceof Long) {
+                return (Long) idObj;
+            } else if (idObj instanceof String) {
+                return Long.parseLong((String) idObj);
+            }
+            throw new RuntimeException("Invalid token payload");
+        } catch (ExpiredJwtException e) {
+            throw new RuntimeException("Token expired");
+        } catch (JwtException e) {
+            throw new RuntimeException("Invalid token");
+        }
     }
 
-    public User deposit(Long userId, DepositRequest request) {
+    // Validate JWT token (for /login endpoint logic)
+    // Expects token to be a JWT string, not a JSON string
+    public void validateToken(String token) {
+        if (tokenBlacklist.contains(token)) {
+            throw new RuntimeException("Token is blacklisted");
+        }
+        try {
+            Jwts.parser()
+                .setSigningKey(jwtSecret.getBytes())
+                .parseClaimsJws(token)
+                .getBody();
+        } catch (ExpiredJwtException e) {
+            throw new RuntimeException("Token expired");
+        } catch (JwtException e) {
+            throw new RuntimeException("Invalid token");
+        }
+    }
+
+    // Should return Map<String, Object>
+    public Map<String, Object> getProfile(String authHeader) {
+        Long userId = extractUserIdFromAuthHeader(authHeader);
+        User user = getUserById(userId.toString());
+        if (user == null) throw new RuntimeException("User not found");
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("Id", user.getId());
+        userMap.put("Username", user.getUsername());
+        userMap.put("Role", user.getRole());
+        userMap.put("Deposit", user.getDeposit());
+        // Do not include password
+        return userMap;
+    }
+
+    // Should return Map<String, Object>
+    public Map<String, Object> addDeposit(String authHeader, DepositRequest request) {
+        Long userId = extractUserIdFromAuthHeader(authHeader);
         int deposit = request.getDeposit();
         List<Integer> allowed = Arrays.asList(5, 10, 20, 50, 100);
         if (!allowed.contains(deposit)) {
-            throw new RuntimeException("Invalid coin value. Allowed: 5, 10, 20, 50, 100.");
+            throw new RuntimeException("Invalid coin value. Allowed coins are: 5, 10, 20, 50, 100.");
         }
-        User user = getUserById(userId);
+        User user = getUserById(userId.toString());
         userRepository.updateDeposit(userId, user.getDeposit() + deposit);
-        return userRepository.findById(userId);
+        user = userRepository.findById(userId);
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("Id", user.getId());
+        userMap.put("Username", user.getUsername());
+        userMap.put("Role", user.getRole());
+        userMap.put("Deposit", user.getDeposit());
+        return userMap;
     }
 
-    public User resetDeposit(Long userId) {
+    // Should return Map<String, Object>
+    public Map<String, Object> resetDeposit(String authHeader) {
+        Long userId = extractUserIdFromAuthHeader(authHeader);
         userRepository.resetDeposit(userId);
-        return userRepository.findById(userId);
+        User user = userRepository.findById(userId);
+        Map<String, Object> userMap = new HashMap<>();
+        userMap.put("Id", user.getId());
+        userMap.put("Username", user.getUsername());
+        userMap.put("Role", user.getRole());
+        userMap.put("Deposit", user.getDeposit());
+        return userMap;
     }
 
     @Transactional
-    public Map<String, Object> purchase(Long userId, PurchaseRequest request) {
-        User user = getUserById(userId);
+    // Should return Order
+    public Order purchaseProducts(String authHeader, PurchaseRequest request) {
+        Long userId = extractUserIdFromAuthHeader(authHeader);
+        User user = getUserById(userId.toString());
         int totalPrice = 0;
         Map<Long, Integer> productQuantities = new HashMap<>();
         for (PurchaseRequest.ProductPurchase p : request.getProducts()) {
@@ -94,7 +181,7 @@ public class UserService {
             totalPrice += prod.getCost() * p.getQuantity();
             productQuantities.put(p.getId(), p.getQuantity());
         }
-        if (user.getDeposit() < totalPrice) throw new RuntimeException("Insufficient deposit");
+        if (user.getDeposit() < totalPrice) throw new RuntimeException("Insufficient deposit to complete the purchase.");
         // Update inventory
         for (Map.Entry<Long, Integer> entry : productQuantities.entrySet()) {
             Product prod = productRepository.findById(entry.getKey());
@@ -109,16 +196,19 @@ public class UserService {
         }
         // Update deposit
         userRepository.updateDeposit(userId, user.getDeposit() - totalPrice);
-        Map<String, Object> result = new HashMap<>();
-        result.put("orderId", orderId);
-        result.put("message", "Order created successfully");
-
-        Map<String, Object> userMap = new HashMap<>();
-        userMap.put("id", user.getId());
-        userMap.put("username", user.getUsername());
-        userMap.put("role", user.getRole());
-        result.put("user", userMap);
-
-        return result;
+        Order order = new Order();
+        order.setId(orderId);
+        // ...set other order fields if needed...
+        return order;
     }
+
+    public void logoutUser(String authHeader) {
+        if (authHeader == null || !authHeader.startsWith("Bearer ")) {
+            throw new RuntimeException("Unauthorized");
+        }
+        String token = authHeader.substring(7);
+        tokenBlacklist.add(token);
+    }
+
+    // All public methods that take authHeader expect "Bearer <jwt>"
 }

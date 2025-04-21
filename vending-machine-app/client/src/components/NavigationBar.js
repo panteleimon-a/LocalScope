@@ -24,11 +24,17 @@ const NavigationBar = ({ onNavigate }) => {
       return;
     }
     try {
-      const response = await fetch('http://localhost:3000/user/login', {
+      const response = await fetch('/user/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: loginUsername, password: loginPassword })
       });
+      const contentType = response.headers.get('content-type');
+      if (!contentType || !contentType.includes('application/json')) {
+        const text = await response.text();
+        setLoginError(`Server error: ${text}`);
+        return;
+      }
       if (!response.ok) {
         const errorData = await response.json();
         if (errorData.message === 'User already logged in') {
@@ -52,7 +58,7 @@ const NavigationBar = ({ onNavigate }) => {
 
   const handleTerminateSessions = async () => {
     try {
-      const response = await fetch('http://localhost:3000/user/logout', {
+      const response = await fetch('/user/logout', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: loginUsername, password: loginPassword })
@@ -70,7 +76,7 @@ const NavigationBar = ({ onNavigate }) => {
   const handleRegister = async (e) => {
     e.preventDefault();
     try {
-      const response = await fetch('http://localhost:3000/user', {
+      const response = await fetch('/user', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username: regUsername, password: regPassword, role: regRole })

@@ -8,9 +8,17 @@ const HomePage = () => {
 
   useEffect(() => {
     setToken(localStorage.getItem('token'));
-    fetch('http://localhost:3000/products')
+    fetch('/products')
       .then(res => res.json())
-      .then(data => setProducts(data))
+      .then(data => {
+        const mapped = data.map(product => ({
+          Id: product.id ?? product.Id,
+          ProductName: product.productName ?? product.ProductName,
+          Cost: product.cost ?? product.Cost,
+          AmountAvailable: product.amountAvailable ?? product.AmountAvailable
+        }));
+        setProducts(mapped);
+      })
       .catch(err => console.error(err));
   }, []);
 
@@ -21,7 +29,7 @@ const HomePage = () => {
       setPurchaseError('Please login to place your order.');
       return;
     }
-    fetch('http://localhost:3000/user/purchase', {
+    fetch('/user/purchase', {
       method: 'POST',
       headers: { 
         'Content-Type': 'application/json',

@@ -8,6 +8,7 @@
 /Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/java-server/src/main/java/com/vendingmachine/dto/RegisterRequest.java
 /Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/java-server/src/main/java/com/vendingmachine/dto/LoginRequest.java
 /Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/java-server/src/main/java/com/vendingmachine/repository/ProductRepository.java
+/Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/java-server/src/main/java/com/vendingmachine/config/WebConfig.java
 /Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/java-server/src/main/java/com/vendingmachine/controller/ProductController.java
 /Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/java-server/src/main/java/com/vendingmachine/VendingMachineBackendApplication.java
 /Users/pante/Repos/Git_Repositories/LocalScope/vending-machine-app/java-server/src/main/java/com/vendingmachine/repository/UserRepository.java

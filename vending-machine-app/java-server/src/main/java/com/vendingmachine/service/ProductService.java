@@ -23,12 +23,30 @@ public class ProductService {
     }
 
     public Product createProduct(ProductRequest productRequest, Long sellerId) {
-        Product product = new Product();
-        product.setProductName(productRequest.getProductName());
-        product.setAmountAvailable(productRequest.getAmountAvailable());
-        product.setCost(productRequest.getCost());
-        product.setSellerId(sellerId);
-        return productRepository.save(product);
+        if (productRequest.getAmountAvailable() <= 0) {
+            throw new IllegalArgumentException("Amount to add must be positive");
+        }
+        // Check if product with same name and sellerId exists
+        Product existing = productRepository.findByProductNameAndSellerId(productRequest.getProductName(), sellerId);
+        if (existing != null) {
+            // Increase amountAvailable
+            existing.setAmountAvailable(existing.getAmountAvailable() + productRequest.getAmountAvailable());
+            // Update cost if different
+            if (existing.getCost() != productRequest.getCost()) {
+                existing.setCost(productRequest.getCost());
+                productRepository.updateCostByProductNameAndSellerId(productRequest.getProductName(), sellerId, productRequest.getCost());
+            }
+            productRepository.update(existing.getId(), existing);
+            // Always return the up-to-date product object
+            return productRepository.findById(existing.getId());
+        } else {
+            Product product = new Product();
+            product.setProductName(productRequest.getProductName());
+            product.setAmountAvailable(productRequest.getAmountAvailable());
+            product.setCost(productRequest.getCost());
+            product.setSellerId(sellerId);
+            return productRepository.save(product);
+        }
     }
 
     public Product updateProduct(Long id, ProductRequest productRequest, Long sellerId) {

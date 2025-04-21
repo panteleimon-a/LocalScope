@@ -60,4 +60,15 @@ public class ProductRepository {
     public int delete(Long id) {
         return jdbcTemplate.update("DELETE FROM Products WHERE Id = ?", id);
     }
+
+    public Product findByProductNameAndSellerId(String productName, Long sellerId) {
+        String sql = "SELECT * FROM Products WHERE ProductName = ? AND SellerId = ?";
+        List<Product> list = jdbcTemplate.query(sql, productRowMapper, productName, sellerId);
+        return list.isEmpty() ? null : list.get(0);
+    }
+
+    public void updateCostByProductNameAndSellerId(String productName, Long sellerId, int newCost) {
+        String sql = "UPDATE Products SET Cost = ? WHERE ProductName = ? AND SellerId = ?";
+        jdbcTemplate.update(sql, newCost, productName, sellerId);
+    }
 }

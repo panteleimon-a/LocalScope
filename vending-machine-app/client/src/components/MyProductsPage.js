@@ -10,7 +10,7 @@ const MyProductsPage = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    fetch('http://localhost:3000/user/profile/myproducts', {
+    fetch('/products', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -22,7 +22,14 @@ const MyProductsPage = () => {
         if (data.message) {
           setError(data.message);
         } else {
-          setProducts(data);
+          // Map backend fields to frontend expected fields
+          const mapped = data.map(product => ({
+            ProductId: product.id ?? product.Id,
+            ProductName: product.productName ?? product.ProductName,
+            ProductPrice: product.cost ?? product.Cost,
+            ProductQuantity: product.amountAvailable ?? product.AmountAvailable
+          }));
+          setProducts(mapped);
         }
       })
       .catch(err => {
@@ -36,7 +43,7 @@ const MyProductsPage = () => {
     setError('');
     setMessage('');
 
-    fetch('http://localhost:3000/products/add', {
+    fetch('/products', {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -54,7 +61,14 @@ const MyProductsPage = () => {
           setError(data.message);
         } else {
           setMessage('Product created successfully.');
-          setProducts([...products, data]);
+          // Map backend fields to frontend expected fields for the new product
+          const mappedProduct = {
+            ProductId: data.id ?? data.Id,
+            ProductName: data.productName ?? data.ProductName,
+            ProductPrice: data.cost ?? data.Cost,
+            ProductQuantity: data.amountAvailable ?? data.AmountAvailable
+          };
+          setProducts([...products, mappedProduct]);
           setProductName('');
           setAmountAvailable('');
           setCost('');
@@ -67,7 +81,7 @@ const MyProductsPage = () => {
   };
 
   const handleDeleteProduct = (productId) => {
-    fetch(`http://localhost:3000/products/delete/${productId}`, {
+    fetch(`/products/${productId}`, {
       method: 'DELETE',
       headers: {
         'Content-Type': 'application/json',
@@ -81,7 +95,6 @@ const MyProductsPage = () => {
         return res.json();
       })
       .then(data => {
-        // If data.message exists, treat it as an error message, otherwise, deletion was successful.
         if (data.message) {
           setError(data.message);
         } else {

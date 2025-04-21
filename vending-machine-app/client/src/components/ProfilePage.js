@@ -8,7 +8,7 @@ const ProfilePage = () => {
   const token = localStorage.getItem('token');
 
   useEffect(() => {
-    fetch('http://localhost:3000/user/profile', {
+    fetch('/user/profile', {
       method: 'GET',
       headers: {
         'Content-Type': 'application/json',
@@ -31,7 +31,7 @@ const ProfilePage = () => {
       return;
     }
 
-    fetch('http://localhost:3000/user/profile/deposit', {
+    fetch('/user/profile/deposit', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
@@ -56,7 +56,7 @@ const ProfilePage = () => {
   };
 
   const handleResetDeposit = () => {
-    fetch('http://localhost:3000/user/profile/reset', {
+    fetch('/user/profile/reset', {
       method: 'PUT',
       headers: {
         'Content-Type': 'application/json',
