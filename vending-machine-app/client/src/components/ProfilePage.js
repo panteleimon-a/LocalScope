@@ -87,7 +87,36 @@ const ProfilePage = () => {
           <p>Id: {profile.Id}</p>
           <p>Username: {profile.Username}</p>
           <p>Role: {profile.Role}</p>
-          <p>Deposit: {profile.Deposit}</p>
+          {/* Deposit graphic bar */}
+          <div style={{ margin: '16px 0' }}>
+            <span style={{ fontWeight: 'bold' }}>Deposit:</span>
+            <div style={{
+              background: '#eee',
+              borderRadius: 8,
+              height: 24,
+              width: 250,
+              marginTop: 4,
+              position: 'relative',
+              boxShadow: '0 1px 2px #ddd inset'
+            }}>
+              <div style={{
+                background: '#4caf50',
+                width: `${Math.min(profile.Deposit, 200) / 2}%`, // scale: 100 = 50%, 200 = 100%
+                height: '100%',
+                borderRadius: 8,
+                transition: 'width 0.3s'
+              }} />
+              <span style={{
+                position: 'absolute',
+                left: 12,
+                top: 2,
+                color: '#222',
+                fontWeight: 'bold'
+              }}>
+                {profile.Deposit} credits
+              </span>
+            </div>
+          </div>
           <form onSubmit={handleDeposit}>
             <input
               type="number"

@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 
-const HomePage = () => {
+const HomePage = ({ search = '' }) => {
   const [products, setProducts] = useState([]);
   const [purchaseError, setPurchaseError] = useState('');
   const [purchaseSuccess, setPurchaseSuccess] = useState('');
@@ -53,12 +53,16 @@ const HomePage = () => {
       {purchaseError && <p style={{ color: 'red' }}>{purchaseError}</p>}
       {purchaseSuccess && <p style={{ color: 'green' }}>{purchaseSuccess}</p>}
       <ul>
-        {products.map(product => (
-          <li key={product.Id}>
-            {product.ProductName} - $ {product.Cost} (Available: {product.AmountAvailable})
-            <button onClick={() => handleBuy(product.Id)}>Buy</button>
-          </li>
-        ))}
+        {products
+          .filter(product =>
+            product.ProductName.toLowerCase().includes(search.toLowerCase())
+          )
+          .map(product => (
+            <li key={product.Id}>
+              {product.ProductName} - $ {product.Cost} (Available: {product.AmountAvailable})
+              <button onClick={() => handleBuy(product.Id)}>Buy</button>
+            </li>
+          ))}
       </ul>
     </div>
   );

@@ -7,7 +7,27 @@ const MyProductsPage = () => {
   const [productName, setProductName] = useState('');
   const [amountAvailable, setAmountAvailable] = useState('');
   const [cost, setCost] = useState('');
+  const [userId, setUserId] = useState(null);
   const token = localStorage.getItem('token');
+
+  useEffect(() => {
+    // Fetch user profile to get userId
+    fetch('/user/profile', {
+      method: 'GET',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': `Bearer ${token}`
+      }
+    })
+      .then(res => res.json())
+      .then(profile => {
+        setUserId(profile.Id);
+      })
+      .catch(err => {
+        setError('Failed to fetch user profile.');
+        console.error(err);
+      });
+  }, [token]);
 
   useEffect(() => {
     fetch('/products', {
@@ -27,7 +47,8 @@ const MyProductsPage = () => {
             ProductId: product.id ?? product.Id,
             ProductName: product.productName ?? product.ProductName,
             ProductPrice: product.cost ?? product.Cost,
-            ProductQuantity: product.amountAvailable ?? product.AmountAvailable
+            ProductQuantity: product.amountAvailable ?? product.AmountAvailable,
+            SellerId: product.sellerId ?? product.SellerId
           }));
           setProducts(mapped);
         }
@@ -66,7 +87,8 @@ const MyProductsPage = () => {
             ProductId: data.id ?? data.Id,
             ProductName: data.productName ?? data.ProductName,
             ProductPrice: data.cost ?? data.Cost,
-            ProductQuantity: data.amountAvailable ?? data.AmountAvailable
+            ProductQuantity: data.amountAvailable ?? data.AmountAvailable,
+            SellerId: data.sellerId ?? data.SellerId
           };
           setProducts([...products, mappedProduct]);
           setProductName('');
@@ -108,13 +130,18 @@ const MyProductsPage = () => {
       });
   };
 
+  // Only show products where SellerId matches the logged-in user
+  const myProducts = userId
+    ? products.filter(product => product.SellerId === userId)
+    : [];
+
   return (
     <div>
       <h1>My Products</h1>
       {error && <p style={{ color: 'red' }}>{error}</p>}
       {message && <p style={{ color: 'green' }}>{message}</p>}
       <ul>
-        {products.map(product => (
+        {myProducts.map(product => (
           <li key={product.ProductId}>
             {product.ProductName} - $ {product.ProductPrice} (Available: {product.ProductQuantity})
             <button onClick={() => handleDeleteProduct(product.ProductId)}>Delete</button>
